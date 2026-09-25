@@ -1,41 +1,26 @@
-# mental_health_research
 # Depression Severity Detection from Social Media: A Comparative Analysis of BERT Models
 
-Comparison of **MentalBERT**, **RoBERTa**, and **MentalRoBERTa** for classifying depression severity from social media posts, across two datasets.
+## Project Purpose
 
-**Author:** Aimeerim Muratbek Kyzy — Dept. of Computer Engineering, Kocaeli University
-
----
-
-## Overview
-
-Depression affects 300M+ people worldwide, yet traditional diagnosis is slow, costly, and stigma-prone — leaving ~60% undiagnosed. Social media (Reddit, Twitter) offers a low-cost signal for early detection. This project fine-tunes three transformer models on two datasets to automatically classify depression severity, and runs a preprocessing ablation study.
-
-## Goals
-
-1. Compare MentalBERT, RoBERTa, and MentalRoBERTa on depression severity classification across two datasets.
-2. Quantify the effect of text preprocessing steps via ablation.
+This project compares **MentalBERT**, **RoBERTa**, and **MentalRoBERTa** for automatically classifying depression severity from social media posts. It has two goals: (1) systematically compare the three models' classification performance across two datasets, and (2) measure how different text preprocessing steps affect model performance through an ablation study.
 
 ## Datasets
 
-| | DS1 (Kayalvizhi & Durairaj, 2022) | DS2 (KUAS-ubicomp, 2023) |
-|---|---|---|
-| Source | Reddit | Reddit + Twitter |
-| Size | 8,891 posts | 41,859 posts |
-| Train/Test | 7,112 / 1,779 | 33,487 / 8,372 |
-| Labels | 3: Not Depressed, Moderate, Severe | 4 (BDI-3): Minimal, Mild, Moderate, Severe |
-| Cohen's Kappa | 0.686 | 0.68–0.75 |
-| Class balance | Imbalanced (SMOTE applied) | Balanced |
+### DS1 — Kayalvizhi & Durairaj (2022), Reddit
+- **Size:** 8,891 posts (7,112 train / 1,779 test)
+- **Labels:** 3 classes — Not Depressed, Moderate, Severe
+- **Annotation:** 2 experts, manual labeling, Cohen's Kappa = 0.686 (Substantial Agreement)
+- **Balance:** Imbalanced (Moderate 63%, Not Depressed 28%, Severe 9%) → balanced with SMOTE
+- **Link:** https://arxiv.org/abs/2202.03047
 
-## Models
+### DS2 — KUAS-ubicomp (Priyadarshana et al., 2023), Reddit + Twitter
+- **Size:** 41,859 posts (33,487 train / 8,372 test)
+- **Labels:** 4 classes based on the BDI-3 clinical scale — Minimal, Mild, Moderate, Severe
+- **Annotation:** Existing labels re-evaluated by 3 annotators, Cohen's Kappa = 0.68–0.75
+- **Balance:** Balanced
+- **Reference:** Priyadarshana, Y. H. P. P., Liang, Z., & Piumarta, I. (2023). *HelaDepDet: A novel multi-class classification model for detecting the severity of human depression.* LNCS, 14199, 3–18.
 
-| Model | Params | Notes |
-|---|---|---|
-| RoBERTa | ~125M | General-purpose baseline |
-| MentalBERT | ~110M | BERT pretrained on mental-health subreddits |
-| MentalRoBERTa | ~125M | RoBERTa + mental-health domain pretraining |
-
-**Setup:** Fine-tuned with AdamW, lr=2e-5. MentalRoBERTa: 256 tokens/5 epochs; others: 128 tokens/3 epochs.
+*Both datasets are also aggregated in the community repository: https://github.com/bucuram/depression-datasets-nlp*
 
 ## Results
 
@@ -43,53 +28,22 @@ Depression affects 300M+ people worldwide, yet traditional diagnosis is slow, co
 
 **DS2 (F1-micro):** MentalBERT 0.7321 · RoBERTa 0.7326 · **MentalRoBERTa 0.7465**
 
-MentalRoBERTa led on every metric in both datasets, confirming the benefit of domain-adaptive pretraining. RoBERTa and MentalBERT differed by only 0.0005 on DS2, showing a strong general model can nearly match a domain-specific one.
+MentalRoBERTa achieved the best score on every metric in both datasets, confirming the benefit of domain-adaptive pretraining. RoBERTa and MentalBERT differed by only 0.0005 on DS2 — a strong general-purpose model can nearly match a domain-specific one. All models clearly beat the literature baseline HelaDepDet (F1 = 0.66).
 
 ## Preprocessing Ablation (MentalRoBERTa, DS2)
 
-Tested 10 cumulative preprocessing steps against a raw-text baseline (F1=0.7678):
+10 cumulative preprocessing steps were tested against the raw-text baseline (F1 = 0.7678):
 
-- **Character-repeat normalization**: +0.0040 (best single gain)
-- **Unicode normalization**: +0.0003
-- Punctuation/whitespace normalization: −0.0098 each (hurt performance)
-- Best config = baseline + these two steps only → **F1 = 0.7576**
+| Step | F1-micro | ΔF1 |
+|---|---|---|
+| Baseline (raw text) | 0.7678 | — |
+| + Character-repeat normalization ★ | 0.7718 | +0.0040 |
+| + Unicode normalization ★ | 0.7681 | +0.0003 |
+| + Punctuation normalization | 0.7580 | −0.0098 |
+| + Whitespace normalization | 0.7580 | −0.0098 |
+| Full pipeline (all steps) | 0.7650 | −0.0028 |
 
-**Takeaway:** Aggressive cleaning removes meaningful stylistic/emotional signal in social media text; only light, targeted preprocessing helps.
-
-## Benchmark Comparison
-
-All models beat the reference baseline HelaDepDet (F1=0.66):
-
-| Model | F1 |
-|---|---|
-| HelaDepDet (baseline, literature) | 0.660 |
-| MentalBERT | 0.7321 |
-| RoBERTa | 0.7326 |
-| MentalRoBERTa | 0.7465 |
-| **MentalRoBERTa + Preprocess** | **0.7576** |
-
-## Key Findings
-
-1. MentalRoBERTa is the best model overall (DS1 F1=0.86, DS2 F1=0.76).
-2. Only minimal, targeted preprocessing (character-repeat + Unicode normalization) helps; heavier cleaning hurts.
-3. All models clearly outperform the literature baseline.
-4. A well-optimized general model (RoBERTa) can rival a domain-specific one (MentalBERT).
-
-## Future Work
-
-- Longer-context models (e.g., Longformer, 512+ tokens)
-- Multilingual datasets
-- Comparison with LLM-based approaches
-- Clinical validation studies
-
-## Key References
-
-- Kayalvizhi & Durairaj (2022) — DS1 dataset
-- Priyadarshana et al. (2023) — DS2 dataset / HelaDepDet
-- Ji et al. (2021) — MentalBERT / MentalRoBERTa
-- Liu et al. (2019) — RoBERTa
-- Chawla et al. (2002) — SMOTE
-- Beck et al. (1996) — BDI
+Only character-repeat and Unicode normalization improved results. Aggressive cleaning (punctuation, whitespace) hurt performance, showing that social media writing style carries meaningful emotional signal. The best configuration (baseline + these two steps only) reached **F1 = 0.7576**, the highest score overall.
 
 ---
-*Dept. of Computer Engineering, Kocaeli University*
+*Dept. of Computer Engineering, Kocaeli University — Aimeerim Muratbek Kyzy*
